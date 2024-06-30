@@ -1,6 +1,7 @@
-# Distributed Systems Implementations
+# Distributed Systems
 
-This repository showcases a series of distributed systems implementations, demonstrating proficiency in key concepts and technologies used in large-scale, fault-tolerant systems.
+This repository showcases a series of distributed systems implementations, mainly for self-education in key concepts and technologies used in large-scale, fault-tolerant systems.
+
 
 ## Project Overview
 
