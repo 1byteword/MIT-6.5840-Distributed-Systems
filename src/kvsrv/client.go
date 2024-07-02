@@ -10,7 +10,6 @@ import (
 
 type Clerk struct {
 	server *labrpc.ClientEnd
-	// You will have to modify this struct.
 }
 
 func nrand() int64 {
@@ -23,7 +22,7 @@ func nrand() int64 {
 func MakeClerk(server *labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
 	ck.server = server
-	// You'll have to add code here.
+
 	return ck
 }
 
@@ -45,43 +44,50 @@ func (ck *Clerk) Get(key string) string {
 	}
 	reply := GetReply{}
 	for {
+		if args.Key == "" {
+			return ""
+		}
+
 		ok := ck.server.Call("KVServer.Get", &args, &reply)
+
 		if ok {
 			return reply.Value
 		}
-		time.Sleep(100 * time.Millisecond)
-	}
-}
 
-// shared by Put and Append.
-//
-// you can send an RPC with code like this:
-// ok := ck.server.Call("KVServer."+op, &args, &reply)
-//
-// the types of args and reply (including whether they are pointers)
-// must match the declared types of the RPC handler function's
-// arguments. and reply must be passed as a pointer.
-func (ck *Clerk) PutAppend(key string, value string, op string) string {
-	// You will have to modify this function.
-	args := PutAppendArgs{
-		Key: key,
-	}
-
-	reply := PutAppendReply{}
-	for {
-		ok := ck.server.Call("KVServer."+op, &args, &reply)
-		if ok {
-			return reply.Value
-		}
 		time.Sleep(100 * time.Millisecond)
 	}
 }
 
 func (ck *Clerk) Put(key string, value string) {
-	ck.PutAppend(key, value, "Put")
+	args := &PutArgs{
+		Key: key,
+	}
+
+	reply := &PutReply{}
+
+	for {
+		ok := ck.server.Call("KVServer.Put", args, reply)
+		if ok {
+			return
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
-// Append value to key's value and return that value
+// Append value to key's value and return old value
 func (ck *Clerk) Append(key string, value string) string {
-	return ck.PutAppend(key, value, "Append")
+	args := &AppendArgs{
+		Key: key,
+	}
+
+	reply := &AppendReply{}
+
+	for {
+		ok := ck.server.Call("KVServer.Append", args, reply)
+		if ok {
+			return reply.Value
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }

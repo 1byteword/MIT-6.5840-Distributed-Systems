@@ -18,11 +18,9 @@ type KVServer struct {
 	mu sync.Mutex
 
 	data map[string]string
-	// Your definitions here.
 }
 
 func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
-	// Your code here.
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
@@ -34,22 +32,19 @@ func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
 	}
 }
 
-func (kv *KVServer) Put(args *PutAppendArgs, reply *PutAppendReply) {
-	// Your code here.
+func (kv *KVServer) Put(args *PutArgs, reply *PutReply) {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	reply.Value = kv.data[args.Key]
 	kv.data[args.Key] = args.Value
 }
 
-func (kv *KVServer) Append(args *PutAppendArgs, reply *PutAppendReply) {
-	// Your code here.
+func (kv *KVServer) Append(args *AppendArgs, reply *AppendReply) {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
 	oldValue, exists := kv.data[args.Key]
-	if !exists {
+	if exists == false {
 		oldValue = ""
 	}
 
@@ -60,6 +55,5 @@ func (kv *KVServer) Append(args *PutAppendArgs, reply *PutAppendReply) {
 func StartKVServer() *KVServer {
 	kv := new(KVServer)
 	kv.data = make(map[string]string)
-
 	return kv
 }
