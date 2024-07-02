@@ -3,6 +3,7 @@ package kvsrv
 import (
 	"crypto/rand"
 	"math/big"
+	"sync"
 	"time"
 
 	"6.5840/labrpc"
@@ -10,6 +11,9 @@ import (
 
 type Clerk struct {
 	server *labrpc.ClientEnd
+	mu     sync.Mutex
+	id     int64
+	seqNum int
 }
 
 func nrand() int64 {
@@ -22,72 +26,59 @@ func nrand() int64 {
 func MakeClerk(server *labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
 	ck.server = server
-
+	ck.id = nrand()
+	ck.seqNum = 0
 	return ck
 }
 
-// fetch the current value for a key.
-// returns "" if the key does not exist.
-// keeps trying forever in the face of all other errors.
-//
-// you can send an RPC with code like this:
-// ok := ck.server.Call("KVServer.Get", &args, &reply)
-//
-// the types of args and reply (including whether they are pointers)
-// must match the declared types of the RPC handler function's
-// arguments. and reply must be passed as a pointer.
 func (ck *Clerk) Get(key string) string {
+	ck.mu.Lock()
+	seqNum := ck.seqNum
+	ck.seqNum++
+	ck.mu.Unlock()
 
-	// You will have to modify this function.
 	args := GetArgs{
-		Key: key,
+		Key:    key,
+		Id:     ck.id,
+		SeqNum: seqNum,
 	}
-	reply := GetReply{}
 	for {
-		if args.Key == "" {
-			return ""
-		}
-
+		var reply GetReply
 		ok := ck.server.Call("KVServer.Get", &args, &reply)
-
-		if ok {
+		if ok && !reply.WrongLeader {
 			return reply.Value
 		}
+		time.Sleep(time.Duration(50+nrand()%50) * time.Millisecond)
+	}
+}
 
-		time.Sleep(100 * time.Millisecond)
+func (ck *Clerk) PutAppend(key string, value string, op string) string {
+	ck.mu.Lock()
+	seqNum := ck.seqNum
+	ck.seqNum++
+	ck.mu.Unlock()
+
+	args := PutAppendArgs{
+		Key:    key,
+		Value:  value,
+		Op:     op,
+		Id:     ck.id,
+		SeqNum: seqNum,
+	}
+	for {
+		var reply PutAppendReply
+		ok := ck.server.Call("KVServer.PutAppend", &args, &reply)
+		if ok && !reply.WrongLeader {
+			return reply.Value
+		}
+		time.Sleep(time.Duration(50+nrand()%50) * time.Millisecond)
 	}
 }
 
 func (ck *Clerk) Put(key string, value string) {
-	args := &PutArgs{
-		Key: key,
-	}
-
-	reply := &PutReply{}
-
-	for {
-		ok := ck.server.Call("KVServer.Put", args, reply)
-		if ok {
-			return
-		}
-
-		time.Sleep(100 * time.Millisecond)
-	}
+	ck.PutAppend(key, value, "Put")
 }
 
-// Append value to key's value and return old value
 func (ck *Clerk) Append(key string, value string) string {
-	args := &AppendArgs{
-		Key: key,
-	}
-
-	reply := &AppendReply{}
-
-	for {
-		ok := ck.server.Call("KVServer.Append", args, reply)
-		if ok {
-			return reply.Value
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
+	return ck.PutAppend(key, value, "Append")
 }
